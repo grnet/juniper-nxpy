@@ -30,21 +30,8 @@ class Device(object):
         self.name = ''
         self.domain_name = ''
         self.interfaces = []
-        self.bgp_peerings = []
         self.vlans = []
-        
 
-    def to_json(self):
-        j = {'name':self.name}
-        interfaces = []
-        for interface in self.interfaces:
-            interfaces.append(interface.to_json())
-        j['interfaces'] = interfaces
-        bgp_peerings = []
-        for peering in self.bgp_peerings:
-            bgp_peerings.append(peering.to_json())
-        j['bgp_peerings'] = bgp_peerings
-        return j
 
     def export(self, netconf_config=False):
         config = new_ele("configuration")
@@ -133,13 +120,6 @@ class Interface(object):
     # The new_description attribute initiates the DeviceDiff class
     new_description = property(get_descr,set_descr)
         
-    def to_json(self):
-        j = {'name':self.name, 'bundle':self.bundle,
-            'description':self.description,
-            'vlantagging':self.vlantagging, 'tunnels':self.tunneldict,
-            'units':self.unitdict}
-        return j
-    
     def export(self):
         ifce = new_ele('interface')
         if self.name:
