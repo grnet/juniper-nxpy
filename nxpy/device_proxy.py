@@ -31,6 +31,7 @@ class Device(object):
         self.domain_name = ''
         self.interfaces = []
         self.vlans = []
+        self.routing_options = []
 
 
     def export(self, netconf_config=False):
@@ -54,6 +55,12 @@ class Device(object):
                 if (vlan):
                     vlans.append(vlan.export())
             config.append(vlans)
+        routing_options = new_ele('routing-options')
+        if len(self.routing_options):
+            for ro in self.routing_options:
+                if (ro):
+                    routing_options.append(ro.export())
+            config.append(routing_options)
         if netconf_config:
             conf = new_ele("config")
             conf.append(config)
@@ -79,6 +86,14 @@ class Device(object):
                 obj_ = Vlan()
                 obj_.build(node)
                 self.vlans.append(obj_) 
+        if nodeName_ == 'routing-options':
+            for node in child_:
+                childName_ = Tag_pattern_.match(node.tag).groups()[-1]
+                # *************** FLOW ****************
+                if childName_ == 'flow':
+                    obj_ = Flow()
+                    obj_.build(node)
+                    self.routing_options.append(obj_) 
 
 class DeviceDiff(Device):
     _instance = None
@@ -295,6 +310,132 @@ class Unit:
                             family_dict['vlan_members'] = vlan_unit_list
                     self.family.append(family_dict)
 
+class Flow(object):    
+    def __init__(self):
+        self.routes = []        
+        
+    def export(self):
+        flow = new_ele('flow')
+        if len(self.routes):
+            for route in self.routes:
+                flow.append(route.export()) 
+            return flow
+        else:
+            return False
+
+    def build(self, node):
+        for child in node:
+            nodeName_ = Tag_pattern_.match(child.tag).groups()[-1]
+            self.buildChildren(child, nodeName_)
+
+    def buildChildren(self, child_, nodeName_, from_subclass=False):
+            if nodeName_ == 'route':
+                obj_ = Route()
+                obj_.build(child_)
+                self.routes.append(obj_)
+
+
+class Route(object):    
+    def __init__(self):
+        self.name = ''
+        self.match = {
+            "destination": [],
+            "source": [],
+            "protocol": [],
+            "port": [],
+            "destination-port": [],
+            "source-port": [],
+            "icmp-code": [],
+            "icmp-type": [],
+            "tcp-flags": [],
+            "packet-length": [],
+            "dscp": [],
+            "fragment": []
+        }
+        ''' Match is a dict with list values
+        example: self. match = {
+            "destination": [<ip-prefix(es)>],
+            "source": [<ip-prefix(es)>],
+            "protocol": [<numeric-expression(s)>],
+            "port": [<numeric-expression(s)>],
+            "destination-port": [<numeric-expression(s)>]
+            "source-port": [<numeric-expression(s)>],
+            "icmp-code": [<numeric-expression(s)>],
+            "icmp-type": [<numeric-expression(s)>],
+            "tcp-flags": [<bitwise-expression(s)>],
+            "packet-length": [<numeric-expression(s)>],
+            "dscp": [<numeric-expression(s)>],
+            "fragment": [
+                "dont-fragment" 
+                "not-a-fragment"
+                "is-fragment"
+                "first-fragment"
+                "last-fragment"
+            ]
+        '''
+        self.then = {
+            "accept": False,
+            "discard": False,
+            "community": False,
+            "next-term": False,
+            "rate-limit": False,
+            "sample": False,
+            "routing-instance": False
+        }
+        '''Then is a dict (have to see about this in the future:
+        self.then = {
+        "accept": True/False,
+        "discard": True/False,
+        "community": "<name>"/False,
+        "next-term": True/False,
+        "rate-limit": <rate>/False,
+        "sample": True/False,
+        "routing-instance": "<RouteTarget extended community>"
+        }
+        '''
+        
+    def export(self):
+        ro = new_ele('route')
+        if self.name:
+            sub_ele(ro, "name").text = self.name
+        match = new_ele("match")
+        for key in self.match:
+            if self.match[key]:
+                for value in self.match[key]:
+                    sub_ele(match,key).text = value
+        if match.getchildren():
+            ro.append(match)
+        then = new_ele("then")
+        for key in self.then:
+            if self.then[key]:
+                sub_ele(then,key)
+        if then.getchildren():
+            ro.append(then)
+        if ro.getchildren():
+            return ro
+        else:
+            return False
+
+    def build(self, node):
+        for child in node:
+            nodeName_ = Tag_pattern_.match(child.tag).groups()[-1]
+            self.buildChildren(child, nodeName_)
+
+    def buildChildren(self, child_, nodeName_, from_subclass=False):
+        if nodeName_ == 'name':
+            name_ = child_.text
+            name_ = re_.sub(STRING_CLEANUP_PAT, " ", name_).strip()
+            self.name = name_
+        elif nodeName_ == 'match':
+            for grandChild_ in child_:
+                grandChildName_ = Tag_pattern_.match(grandChild_.tag).groups()[-1]
+                grandChildText = grandChild_.text
+                grandChildText = re_.sub(STRING_CLEANUP_PAT, " ", grandChildText).strip()
+                self.match[grandChildName_].append(grandChildText)
+        elif nodeName_ == 'then':
+            for grandChild_ in child_:
+                grandChildName_ = Tag_pattern_.match(grandChild_.tag).groups()[-1]
+                self.then[grandChildName_] = True
 
 class Parser(object):
     def __init__(self, confile=None):
