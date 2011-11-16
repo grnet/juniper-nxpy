@@ -408,7 +408,10 @@ class Route(object):
         then = new_ele("then")
         for key in self.then:
             if self.then[key]:
-                sub_ele(then,key)
+                if self.then[key] != True and self.then[key] != False:
+                    sub_ele(then,key).text = self.then[key]
+                else:
+                    sub_ele(then,key)
         if then.getchildren():
             ro.append(then)
         if ro.getchildren():
