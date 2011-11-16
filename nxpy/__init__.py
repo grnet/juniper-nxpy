@@ -20,5 +20,7 @@ __all__ = [
 "Interface",
 "Vlan",
 "Unit",
+"Flow",
+"Route",
 "Parser"
 ]
