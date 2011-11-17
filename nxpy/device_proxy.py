@@ -338,7 +338,7 @@ class Flow(object):
 class Route(object):    
     def __init__(self):
         self.name = ''
-        self.opertion = None
+        self.operation = None
         self.match = {
             "destination": [],
             "source": [],
