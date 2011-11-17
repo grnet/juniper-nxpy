@@ -338,6 +338,7 @@ class Flow(object):
 class Route(object):    
     def __init__(self):
         self.name = ''
+        self.opertion = None
         self.match = {
             "destination": [],
             "source": [],
@@ -395,7 +396,10 @@ class Route(object):
         '''
         
     def export(self):
-        ro = new_ele('route')
+        if self.operation:
+           ro = new_ele('route', {'operation':self.operation})
+        else:
+            ro = new_ele('route')
         if self.name:
             sub_ele(ro, "name").text = self.name
         match = new_ele("match")
