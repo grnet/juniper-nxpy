@@ -43,5 +43,11 @@ conf.interfaces
 (...you should get the list of device interfaces)
 
 
+Changelog:
 
+v0.3:
+- Support for basic interface configuration (name, description, vlan)
+- Support for basic vlan configuration
 
+v0.4:
+- Added full support for bgp flowspec (routing-options flow) configuration
