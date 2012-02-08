@@ -16,7 +16,7 @@
 from distutils.core import setup
 
 setup(name='nxpy',
-      version='0.3',
+      version='0.4.1',
       description='Network Device XML configuration to Python Proxy',
       author='Leonidas Poulopoulos (GRNET NOC)',
       author_email='leopoul@noc.grnet.gr',
