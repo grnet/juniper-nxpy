@@ -32,6 +32,7 @@ class Device(object):
         self.interfaces = []
         self.vlans = []
         self.routing_options = []
+        self.protocols = []
 
 
     def export(self, netconf_config=False):
@@ -213,6 +214,8 @@ class Unit:
         self.name = ''
         self.description = ''
         self.vlan_id = ''
+        self.encapsulation = ''
+        self.apply_groups = ''
         #family: {'name':(one of inet, inet6, mpls, iso...), 'addresses':[], 'mtu':'', 'accounting': {}, 'vlan_members':['',''], 'vlan_members_operation':'delete' or 'replace' or 'merge'(this is the default so omit)}
         self.family = []
         
@@ -223,6 +226,10 @@ class Unit:
             sub_ele(unit, "name").text = self.name
         if self.description:
             sub_ele(unit, "description").text = self.description
+        if self.apply_grpups:
+            sub_ele(unit, "apply-groups").text = self.apply_groups
+        if self.encapsulation:
+            sub_ele(unit, "encapsulation").text = self.encapsulation
         if self.vlan_id:
             sub_ele(unit, "vlan-id").text = self.vlan_id
         if len(self.family):
@@ -276,7 +283,14 @@ class Unit:
             self.buildChildren(child, nodeName_)
 
     def buildChildren(self, child_, nodeName_, from_subclass=False):
-
+        if nodeName_ == 'encapsulation':
+            encapsulation_ = child_.text
+            encapsulation_ = re_.sub(STRING_CLEANUP_PAT, " ", encapsulation_).strip()
+            self.encapsulation = encapsulation_
+        if nodeName_ == 'apply-groups':
+            apply_groups_ = child_.text
+            apply_groups_ = re_.sub(STRING_CLEANUP_PAT, " ", apply_groups_).strip()
+            self.apply_groups = apply_groups_
         if nodeName_ == 'name':
             name_ = child_.text
             name_ = re_.sub(STRING_CLEANUP_PAT, " ", name_).strip()
@@ -310,7 +324,7 @@ class Unit:
                             family_dict['vlan_members'] = vlan_unit_list
                     self.family.append(family_dict)
 
-class Flow(object):    
+class Flow(object):
     def __init__(self):
         self.routes = []        
         
