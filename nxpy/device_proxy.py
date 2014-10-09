@@ -584,7 +584,9 @@ class L2Circuit(object):
                 self.neighbors.append(obj_)
 
 
-class L2CNeighbor(object):    
+class L2CNeighbor(object):
+    def __repr__(self):
+        return "Name %s" % (self.name)   
     def __init__(self):
         self.name = ''
         self.interfaces = []
@@ -616,7 +618,9 @@ class L2CNeighbor(object):
             self.interfaces.append(obj_)
 
 
-class L2CIfce(object):    
+class L2CIfce(object):
+    def __repr__(self):
+        return "Name %s, VCID: %s, MTU: %s" % (self.name, self.virtual_circuit_id, self.mtu) 
     def __init__(self):
         self.name = ''
         self.virtual_circuit_id = ''
