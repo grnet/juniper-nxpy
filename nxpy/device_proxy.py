@@ -62,6 +62,11 @@ class Device(object):
                 if (ro):
                     routing_options.append(ro.export())
             config.append(routing_options)
+        if len(self.protocols):
+            for pro in self.protocols:
+                if (pro):
+                    protocols.append(pro.export())
+            config.append(protocols)
         if netconf_config:
             conf = new_ele("config")
             conf.append(config)
@@ -510,3 +515,68 @@ class Parser(object):
         rootObj.build(rootNode)
         return rootObj
 
+class L2circuit(object):
+    def __init__(self):
+        self.neighbors = []        
+        
+    def export(self):
+        l2circuit = new_ele('l2circuit')
+        if len(self.neighbors):
+            for neighbor in self.neighbors:
+                l2circuit.append(neighbor.export()) 
+            return l2circuit
+        else:
+            return False
+
+    def build(self, node):
+        for child in node:
+            nodeName_ = Tag_pattern_.match(child.tag).groups()[-1]
+            self.buildChildren(child, nodeName_)
+
+    def buildChildren(self, child_, nodeName_, from_subclass=False):
+            if nodeName_ == 'neighbor':
+                obj_ = L2CNeighbor()
+                obj_.build(child_)
+                self.neighbors.append(obj_)
+
+
+class L2CNeighbor(object):    
+    def __init__(self):
+        self.name = ''
+        self.interfaces = []
+
+
+class Flow(object):
+    def __init__(self):
+        self.routes = []        
+        
+    def export(self):
+        flow = new_ele('flow')
+        if len(self.routes):
+            for route in self.routes:
+                flow.append(route.export()) 
+            return flow
+        else:
+            return False
+
+    def build(self, node):
+        for child in node:
+            nodeName_ = Tag_pattern_.match(child.tag).groups()[-1]
+            self.buildChildren(child, nodeName_)
+
+    def buildChildren(self, child_, nodeName_, from_subclass=False):
+            if nodeName_ == 'route':
+                obj_ = Route()
+                obj_.build(child_)
+                self.routes.append(obj_)     
+#<l2circuit>
+#            <neighbor>
+#                <name>1.2.3.4</name>
+#                <interface>
+#                    <name>ae6.3941</name>
+#                    <virtual-circuit-id>3941</virtual-circuit-id>
+#                    <description>dfasdfasdfasdf</description>
+#                    <no-control-word/>
+#                    <mtu>9022</mtu>
+#                </interface>
+#            </neighbor>
