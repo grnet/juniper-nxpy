@@ -640,7 +640,7 @@ class L2CIfce(object):
         if self.mtu:
             sub_ele(ifce, "mtu").text = str(self.mtu)
         if self.no_control_word:
-            sub_ele(ifce, "no_control_word")
+            sub_ele(ifce, "no-control-word")
         return ifce
 
     def build(self, node):
