@@ -62,6 +62,7 @@ class Device(object):
                 if (ro):
                     routing_options.append(ro.export())
             config.append(routing_options)
+        protocols = new_ele('protocols')
         if len(self.protocols):
             for pro in self.protocols:
                 if (pro):
@@ -99,7 +100,14 @@ class Device(object):
                 if childName_ == 'flow':
                     obj_ = Flow()
                     obj_.build(node)
-                    self.routing_options.append(obj_) 
+                    self.routing_options.append(obj_)
+        if nodeName_ == 'protocols':
+            for node in child_:
+                childName_ = Tag_pattern_.match(node.tag).groups()[-1]
+                if childName_ == 'l2circuit':
+                    obj_ = L2Circuit()
+                    obj_.build(node)
+                    self.protocols.append(obj_)
 
 class DeviceDiff(Device):
     _instance = None
@@ -197,6 +205,7 @@ class Vlan:
             return vlan
         else:
             return False
+
     def build(self, node):
         for child in node:
             nodeName_ = Tag_pattern_.match(child.tag).groups()[-1]
@@ -221,6 +230,8 @@ class Unit:
         self.vlan_id = ''
         self.encapsulation = ''
         self.apply_groups = ''
+        self.input_vlan_map = {'swap':False, 'vlan_id':''}
+        self.output_vlan_map = {'swap':False, 'vlan_id':''}
         #family: {'name':(one of inet, inet6, mpls, iso...), 'addresses':[], 'mtu':'', 'accounting': {}, 'vlan_members':['',''], 'vlan_members_operation':'delete' or 'replace' or 'merge'(this is the default so omit)}
         self.family = []
         
@@ -231,12 +242,24 @@ class Unit:
             sub_ele(unit, "name").text = self.name
         if self.description:
             sub_ele(unit, "description").text = self.description
-        if self.apply_grpups:
+        if self.apply_groups:
             sub_ele(unit, "apply-groups").text = self.apply_groups
         if self.encapsulation:
             sub_ele(unit, "encapsulation").text = self.encapsulation
         if self.vlan_id:
             sub_ele(unit, "vlan-id").text = self.vlan_id
+        if self.input_vlan_map['swap'] or self.input_vlan_map['vlan_id']:
+            ivm = new_ele('input-vlan-map')
+            sub_ele(ivm,"swap")
+            if self.input_vlan_map['vlan_id']:
+                sub_ele(ivm,"vlan-id").text = self.input_vlan_map['vlan_id']
+            unit.append(ivm)
+        if self.output_vlan_map['swap'] or self.output_vlan_map['vlan_id']:
+            ovm = new_ele('output-vlan-map')
+            sub_ele(ovm,"swap")
+            if self.output_vlan_map['vlan_id']:
+                sub_ele(ovm,"vlan-id").text = self.output_vlan_map['vlan_id']
+            unit.append(ovm)
         if len(self.family):
             family = new_ele("family")
             for member in self.family:
@@ -308,6 +331,24 @@ class Unit:
             description_ = child_.text
             description_ = re_.sub(STRING_CLEANUP_PAT, " ", description_).strip()
             self.description = description_
+        elif nodeName_ == 'input-vlan-map':
+            for node in child_:
+                childName_ = Tag_pattern_.match(node.tag).groups()[-1]
+                if childName_ == 'swap':
+                     self.input_vlan_map['swap'] = True
+                if childName_ == 'vlan-id':
+                     vlan_id = node.text
+                     vlan_id = re_.sub(STRING_CLEANUP_PAT, " ", vlan_id).strip()
+                     self.input_vlan_map['vlan_id'] = vlan_id
+        elif nodeName_ == 'output-vlan-map':
+            for node in child_:
+                childName_ = Tag_pattern_.match(node.tag).groups()[-1]
+                if childName_ == 'swap':
+                     self.output_vlan_map['swap'] = True
+                if childName_ == 'vlan-id':
+                     vlan_id = node.text
+                     vlan_id = re_.sub(STRING_CLEANUP_PAT, " ", vlan_id).strip()
+                     self.output_vlan_map['vlan_id'] = vlan_id
         elif nodeName_ == 'family':
             vlan_unit_list = []
             family_dict = {}
@@ -515,7 +556,7 @@ class Parser(object):
         rootObj.build(rootNode)
         return rootObj
 
-class L2circuit(object):
+class L2Circuit(object):
     def __init__(self):
         self.neighbors = []        
         
@@ -523,7 +564,10 @@ class L2circuit(object):
         l2circuit = new_ele('l2circuit')
         if len(self.neighbors):
             for neighbor in self.neighbors:
-                l2circuit.append(neighbor.export()) 
+                try:
+                    l2circuit.append(neighbor.export())
+                except TypeError:
+                    pass  
             return l2circuit
         else:
             return False
@@ -544,7 +588,83 @@ class L2CNeighbor(object):
     def __init__(self):
         self.name = ''
         self.interfaces = []
+    
+    def export(self):
+        l2cneighbor = new_ele('neighbor')
+        if self.name:
+            sub_ele(l2cneighbor, "name").text = self.name
+        if len(self.interfaces):
+            for ifce in self.interfaces:
+                l2cneighbor.append(ifce.export())
+            return l2cneighbor
+        else:
+            return False
+    
+    def build(self, node):
+        for child in node:
+            nodeName_ = Tag_pattern_.match(child.tag).groups()[-1]
+            self.buildChildren(child, nodeName_)
 
+    def buildChildren(self, child_, nodeName_, from_subclass=False):
+        if nodeName_ == 'name':
+            name_ = child_.text
+            name_ = re_.sub(STRING_CLEANUP_PAT, " ", name_).strip()
+            self.name = name_
+        if nodeName_ == 'interface':
+            obj_ = L2CIfce()
+            obj_.build(child_)
+            self.interfaces.append(obj_)
+
+
+class L2CIfce(object):    
+    def __init__(self):
+        self.name = ''
+        self.virtual_circuit_id = ''
+        self.description = ''
+        self.mtu = ''
+        self.no_control_word = False
+        
+        
+    def export(self):
+        ifce = new_ele('interface')
+        if self.name:
+            sub_ele(ifce, "name").text = self.name
+        if self.virtual_circuit_id:
+            sub_ele(ifce, "virtual-circuit-id").text = str(self.virtual_circuit_id)
+        if self.description:
+            sub_ele(ifce, "description").text = self.description
+        if self.mtu:
+            sub_ele(ifce, "mtu").text = str(self.mtu)
+        if self.no_control_word:
+            sub_ele(ifce, "no_control_word")
+        return ifce
+
+    def build(self, node):
+        for child in node:
+            nodeName_ = Tag_pattern_.match(child.tag).groups()[-1]
+            self.buildChildren(child, nodeName_)
+
+    def buildChildren(self, child_, nodeName_, from_subclass=False):
+        if nodeName_ == 'name':
+            name_ = child_.text
+            name_ = re_.sub(STRING_CLEANUP_PAT, " ", name_).strip()
+            self.name = name_
+        if nodeName_ == 'virtual-circuit-id':
+            virtual_circuit_id_ = child_.text
+            virtual_circuit_id_ = re_.sub(STRING_CLEANUP_PAT, " ", virtual_circuit_id_).strip()
+            self.virtual_circuit_id = virtual_circuit_id_
+        if nodeName_ == 'description':
+            description_ = child_.text
+            description_ = re_.sub(STRING_CLEANUP_PAT, " ", description_).strip()
+            self.description = description_
+        if nodeName_ == 'mtu':
+            mtu_ = child_.text
+            mtu_ = re_.sub(STRING_CLEANUP_PAT, " ", mtu_).strip()
+            self.mtu = mtu_
+        if nodeName_ == 'no-control-word':
+            self.no_control_word = True
+        
+        
 
 class Flow(object):
     def __init__(self):
@@ -569,14 +689,3 @@ class Flow(object):
                 obj_ = Route()
                 obj_.build(child_)
                 self.routes.append(obj_)     
-#<l2circuit>
-#            <neighbor>
-#                <name>1.2.3.4</name>
-#                <interface>
-#                    <name>ae6.3941</name>
-#                    <virtual-circuit-id>3941</virtual-circuit-id>
-#                    <description>dfasdfasdfasdf</description>
-#                    <no-control-word/>
-#                    <mtu>9022</mtu>
-#                </interface>
-#            </neighbor>
