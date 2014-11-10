@@ -32,7 +32,7 @@ class Device(object):
         self.interfaces = []
         self.vlans = []
         self.routing_options = []
-        self.protocols = []
+        self.protocols = {}
 
 
     def export(self, netconf_config=False):
@@ -63,10 +63,9 @@ class Device(object):
                     routing_options.append(ro.export())
             config.append(routing_options)
         protocols = new_ele('protocols')
-        if len(self.protocols):
-            for pro in self.protocols:
-                if (pro):
-                    protocols.append(pro.export())
+        if len(self.protocols.keys()):
+            for pro in self.protocols.keys():
+                protocols.append(self.protocols[pro].export())
             config.append(protocols)
         if netconf_config:
             conf = new_ele("config")
@@ -79,8 +78,12 @@ class Device(object):
 
     def build(self, node):
         for child in node:
-            nodeName_ = Tag_pattern_.match(child.tag).groups()[-1]
-            self.buildChildren(child, nodeName_)
+            try:
+                nodeName_ = Tag_pattern_.match(child.tag).groups()[-1]
+                self.buildChildren(child, nodeName_)
+            except Exception as e:
+                print child
+                print e
 
     def buildChildren(self, child_, nodeName_, from_subclass=False):
         if nodeName_ == 'interfaces':
@@ -107,7 +110,12 @@ class Device(object):
                 if childName_ == 'l2circuit':
                     obj_ = L2Circuit()
                     obj_.build(node)
-                    self.protocols.append(obj_)
+                    self.protocols['l2circuit'] = obj_
+                if childName_ == 'oam':
+                    obj_ = OAM()
+                    obj_.build(node)
+                    self.protocols['oam']=obj_
+                    
 
 class DeviceDiff(Device):
     _instance = None
@@ -394,7 +402,6 @@ class Flow(object):
                 obj_.build(child_)
                 self.routes.append(obj_)
 
-
 class Route(object):    
     def __init__(self):
         self.name = ''
@@ -583,7 +590,265 @@ class L2Circuit(object):
                 obj_.build(child_)
                 self.neighbors.append(obj_)
 
+class OAM(object):
+    def __init__(self):
+        self.ethernet = ''        
+        
+    def export(self):
+        oam = new_ele('oam')
+        if (self.ethernet):
+            try:
+                oam.append(self.ethernet.export())
+            except TypeError:
+                pass  
+            return oam
+        else:
+            return False
 
+    def build(self, node):
+        for child in node:
+            nodeName_ = Tag_pattern_.match(child.tag).groups()[-1]
+            self.buildChildren(child, nodeName_)
+
+    def buildChildren(self, child_, nodeName_, from_subclass=False):
+            if nodeName_ == 'ethernet':
+                obj_ = EthernetOAM()
+                obj_.build(child_)
+                self.ethernet = obj_
+
+
+class EthernetOAM(object):
+    def __init__(self):
+        self.connectivity_fault_management = ''       
+        
+    def export(self):
+        ethoam = new_ele('ethernet')
+        if (self.connectivity_fault_management):
+            try:
+                ethoam.append(self.connectivity_fault_management.export())
+            except TypeError:
+                pass  
+            return ethoam
+        else:
+            return False
+
+    def build(self, node):
+        for child in node:
+            nodeName_ = Tag_pattern_.match(child.tag).groups()[-1]
+            self.buildChildren(child, nodeName_)
+
+    def buildChildren(self, child_, nodeName_, from_subclass=False):
+            if nodeName_ == 'connectivity-fault-management':
+                obj_ = EthernetOAMCFM()
+                obj_.build(child_)
+                self.connectivity_fault_management = obj_
+
+class EthernetOAMCFM(object):
+    def __init__(self):
+        self.maintenance_domains = []        
+        
+    def export(self):
+        ethoamcfm = new_ele('connectivity-fault-management')
+        if len(self.maintenance_domains):
+            for md in self.maintenance_domains:
+                try:
+                    ethoamcfm.append(md.export())
+                except TypeError:
+                    pass  
+            return ethoamcfm
+        else:
+            return False
+
+    def build(self, node):
+        for child in node:
+            nodeName_ = Tag_pattern_.match(child.tag).groups()[-1]
+            self.buildChildren(child, nodeName_)
+
+    def buildChildren(self, child_, nodeName_, from_subclass=False):
+            if nodeName_ == 'maintenance-domain':
+                obj_ = CFMMD()
+                obj_.build(child_)
+                self.maintenance_domains.append(obj_)
+
+class CFMMD(object):
+    def __repr__(self):
+        return "MD: %s Lvl: %s" % (self.name, self.level)
+
+    def __init__(self):
+        self.name = ''
+        self.level = ''
+        self.operation = None
+        self.maintenance_association = ''
+    
+    def export(self):
+        if self.operation:
+           md = new_ele('maintenance-domain', {'operation':self.operation})
+        else:
+            md = new_ele('maintenance-domain')
+        if self.name:
+            sub_ele(md, "name").text = self.name
+        if self.level:
+            sub_ele(md, "level").text = str(self.level)
+        if self.maintenance_association:
+            md.append(self.maintenance_association.export())    
+        return md
+    
+    def build(self, node):
+        for child in node:
+            nodeName_ = Tag_pattern_.match(child.tag).groups()[-1]
+            self.buildChildren(child, nodeName_)
+
+    def buildChildren(self, child_, nodeName_, from_subclass=False):
+        if nodeName_ == 'name':
+            name_ = child_.text
+            name_ = re_.sub(STRING_CLEANUP_PAT, " ", name_).strip()
+            self.name = name_
+        if nodeName_ == 'level':
+            level_ = child_.text
+            level_ = re_.sub(STRING_CLEANUP_PAT, " ", level_).strip()
+            self.level = level_
+        if nodeName_ == 'maintenance-association':
+            obj_ = MaintenanceAssoc()
+            obj_.build(child_)
+            self.maintenance_association = obj_
+        #TODO: Implement MA
+
+class MaintenanceAssoc(object):
+    def __repr__(self):
+        return "MA: %s MEP: %s, Ifce: %s, Dir: %s" % (self.name, self.mep['name'], self.mep['ifce'], self.mep['direction'])
+
+    def __init__(self, name=None, cc_interval="1s", cc_lt="3", cc_hi="7", cc_ifce_tlv=True, cc_port_tlv=False, mip_hf=None, mep_name=None, mep_ifce=None, mep_ifce_vlan=None, mep_direction=None, mep_auto_disco=True, mep_rem_name=None, sla_iter_profiles=[]):
+        self.name = name
+        self.operation = None
+        self.continuity_check = {"interval":cc_interval,
+                                 "loss_threshold": cc_lt,
+                                 "hold_interval": cc_hi,
+                                 "interface_status_tlv": cc_ifce_tlv,
+                                 "port_status_tlv": cc_port_tlv
+                                 }
+        self.mip_half_function = mip_hf
+        self.mep = {"name": mep_name,
+                    "ifce": mep_ifce,
+                    "ifce_vlan": mep_ifce_vlan,
+                    "direction": mep_direction,
+                    "auto_discovery": mep_auto_disco,
+                    "remote_mep":{"name":mep_rem_name, "sla_iterator_profiles": sla_iter_profiles}
+                    }
+    
+    def export(self):
+        if self.operation:
+            ma = new_ele("maintenance-association", {'operation':self.operation})
+        else:
+            ma = new_ele("maintenance-association")
+        if self.name:
+            sub_ele(ma, "name").text = self.name
+        if self.mip_half_function:
+            sub_ele(ma, "mip-half-function").text = self.mip_half_function
+        cc = sub_ele(ma, "continuity-check")
+        if self.continuity_check['interval']:
+            sub_ele(cc, "interval").text = self.continuity_check['interval']
+        if self.continuity_check['loss_threshold']:
+            sub_ele(cc, "loss-threshold").text = self.continuity_check['loss_threshold']
+        if self.continuity_check['hold_interval']:
+            sub_ele(cc, "hold-interval").text = self.continuity_check['hold_interval']
+        if self.continuity_check['interface_status_tlv']:
+            sub_ele(cc, "interface-status-tlv")
+        if self.continuity_check['port_status_tlv']:
+            sub_ele(cc, "port-status-tlv")
+        mep = sub_ele(ma, "mep")
+        if self.mep['name']:
+            sub_ele(mep, 'name').text = self.mep['name']
+        if self.mep['direction']:
+            sub_ele(mep, 'direction').text = self.mep['direction']
+        if self.mep['auto_discovery']:
+            sub_ele(mep, 'auto_discovery')
+        if self.mep['ifce']:
+            ifce = sub_ele(mep, 'interface')
+            sub_ele(ifce, "interface-name").text = self.mep['ifce']
+            if self.mep['ifce_vlan']:
+                sub_ele(ifce, "vlan-id").text = self.mep['ifce_vlan']
+        if self.mep['remote_mep']['name'] and self.mep['remote_mep']['sla_iterator_profiles']:
+            rmep = sub_ele(mep, "remote-mep")
+            sub_ele(rmep, 'name').text = self.mep['remote_mep']['name']
+            for sip in self.mep['remote_mep']['sla_iterator_profiles']:
+                slaip = sub_ele(rmep, 'sla-iterator-profile')
+                sub_ele(slaip, 'name').text = sip
+        return ma
+    
+    def build(self, node):
+        for child in node:
+            nodeName_ = Tag_pattern_.match(child.tag).groups()[-1]
+            self.buildChildren(child, nodeName_)
+
+    def buildChildren(self, child_, nodeName_, from_subclass=False):
+        if nodeName_ == 'name':
+            name_ = child_.text
+            name_ = re_.sub(STRING_CLEANUP_PAT, " ", name_).strip()
+            self.name = name_
+        if nodeName_ == 'mip-half-function':
+            mhf_ = child_.text
+            mhf_ = re_.sub(STRING_CLEANUP_PAT, " ", mhf_).strip()
+            self.mip_half_function = mhf_
+        if nodeName_ == 'continuity-check':
+            for grandChild_ in child_:
+                grandChildName_ = Tag_pattern_.match(grandChild_.tag).groups()[-1]
+                if grandChildName_ == 'interval':
+                    grandChildText = grandChild_.text
+                    grandChildText = re_.sub(STRING_CLEANUP_PAT, " ", grandChildText).strip()
+                    self.continuity_check['interval'] = grandChildText
+                if grandChildName_ == 'loss-threshold':
+                    grandChildText = grandChild_.text
+                    grandChildText = re_.sub(STRING_CLEANUP_PAT, " ", grandChildText).strip()
+                    self.continuity_check['loss_threshold'] = grandChildText
+                if grandChildName_ == 'hold-interval':
+                    grandChildText = grandChild_.text
+                    grandChildText = re_.sub(STRING_CLEANUP_PAT, " ", grandChildText).strip()
+                    self.continuity_check['hold_interval'] = grandChildText
+                if grandChildName_ == 'interface-status-tlv':
+                    self.continuity_check['interface_status_tlv'] = True
+                if grandChildName_ == 'port-status-tlv':
+                    self.continuity_check['port_status_tlv'] = True
+        if nodeName_ == 'mep':
+            for grandChild_ in child_:
+                grandChildName_ = Tag_pattern_.match(grandChild_.tag).groups()[-1]
+                if grandChildName_ == 'name':
+                    grandChildText = grandChild_.text
+                    grandChildText = re_.sub(STRING_CLEANUP_PAT, " ", grandChildText).strip()
+                    self.mep['name'] = grandChildText
+                if grandChildName_ == 'interface':
+                    for grandgrandChild_ in grandChild_:
+                        grandgrandChildName_ = Tag_pattern_.match(grandgrandChild_.tag).groups()[-1]
+                        if grandgrandChildName_ == 'interface-name':
+                            grandgrandChildText = grandgrandChild_.text
+                            grandgrandChildText = re_.sub(STRING_CLEANUP_PAT, " ", grandgrandChildText).strip()
+                            self.mep['ifce'] = grandgrandChildText
+                        if grandgrandChildName_ == 'vlan-id':
+                            grandgrandChildText = grandgrandChild_.text
+                            grandgrandChildText = re_.sub(STRING_CLEANUP_PAT, " ", grandgrandChildText).strip()
+                            self.mep['ifce_vlan'] = grandgrandChildText
+                if grandChildName_ == 'direction':
+                    grandChildText = grandChild_.text
+                    grandChildText = re_.sub(STRING_CLEANUP_PAT, " ", grandChildText).strip()
+                    self.mep['direction'] = grandChildText
+                if grandChildName_ == 'auto-discovery':
+                    self.mep['auto_discovery'] = True
+                if grandChildName_ == 'remote-mep':
+                    for grandgrandChild_ in grandChild_:
+                        grandgrandChildName_ = Tag_pattern_.match(grandgrandChild_.tag).groups()[-1]
+                        if grandgrandChildName_ == 'name':
+                            grandgrandChildText = grandgrandChild_.text
+                            grandgrandChildText = re_.sub(STRING_CLEANUP_PAT, " ", grandgrandChildText).strip()
+                            self.mep['remote_mep']['name'] = grandgrandChildText
+                        if grandgrandChildName_ == 'sla-iterator-profile':
+                            for grand3Child_ in grandgrandChild_:
+                                grand3ChildName_ = Tag_pattern_.match(grand3Child_.tag).groups()[-1]
+                                if grand3ChildName_ == 'name':
+                                    grand3ChildText = grand3Child_.text
+                                    grand3ChildText = re_.sub(STRING_CLEANUP_PAT, " ", grand3ChildText).strip()
+                                    self.mep['remote_mep']['sla_iterator_profiles'].append(grand3ChildText)
+                            
+                
+            
 class L2CNeighbor(object):
     def __repr__(self):
         return "Name %s" % (self.name)   
@@ -668,28 +933,5 @@ class L2CIfce(object):
         if nodeName_ == 'no-control-word':
             self.no_control_word = True
         
-        
 
-class Flow(object):
-    def __init__(self):
-        self.routes = []        
-        
-    def export(self):
-        flow = new_ele('flow')
-        if len(self.routes):
-            for route in self.routes:
-                flow.append(route.export()) 
-            return flow
-        else:
-            return False
 
-    def build(self, node):
-        for child in node:
-            nodeName_ = Tag_pattern_.match(child.tag).groups()[-1]
-            self.buildChildren(child, nodeName_)
-
-    def buildChildren(self, child_, nodeName_, from_subclass=False):
-            if nodeName_ == 'route':
-                obj_ = Route()
-                obj_.build(child_)
-                self.routes.append(obj_)     
