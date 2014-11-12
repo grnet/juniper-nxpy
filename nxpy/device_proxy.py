@@ -78,12 +78,8 @@ class Device(object):
 
     def build(self, node):
         for child in node:
-            try:
-                nodeName_ = Tag_pattern_.match(child.tag).groups()[-1]
-                self.buildChildren(child, nodeName_)
-            except Exception as e:
-                print child
-                print e
+            nodeName_ = Tag_pattern_.match(child.tag).groups()[-1]
+            self.buildChildren(child, nodeName_)
 
     def buildChildren(self, child_, nodeName_, from_subclass=False):
         if nodeName_ == 'interfaces':
@@ -115,7 +111,6 @@ class Device(object):
                     obj_ = OAM()
                     obj_.build(node)
                     self.protocols['oam']=obj_
-                    
 
 class DeviceDiff(Device):
     _instance = None
@@ -833,6 +828,7 @@ class MaintenanceAssoc(object):
                 if grandChildName_ == 'auto-discovery':
                     self.mep['auto_discovery'] = True
                 if grandChildName_ == 'remote-mep':
+                    self.mep['remote_mep']['sla_iterator_profiles'] = []
                     for grandgrandChild_ in grandChild_:
                         grandgrandChildName_ = Tag_pattern_.match(grandgrandChild_.tag).groups()[-1]
                         if grandgrandChildName_ == 'name':
@@ -846,9 +842,7 @@ class MaintenanceAssoc(object):
                                     grand3ChildText = grand3Child_.text
                                     grand3ChildText = re_.sub(STRING_CLEANUP_PAT, " ", grand3ChildText).strip()
                                     self.mep['remote_mep']['sla_iterator_profiles'].append(grand3ChildText)
-                            
-                
-            
+
 class L2CNeighbor(object):
     def __repr__(self):
         return "Name %s" % (self.name)   
@@ -881,7 +875,6 @@ class L2CNeighbor(object):
             obj_ = L2CIfce()
             obj_.build(child_)
             self.interfaces.append(obj_)
-
 
 class L2CIfce(object):
     def __repr__(self):
@@ -932,6 +925,5 @@ class L2CIfce(object):
             self.mtu = mtu_
         if nodeName_ == 'no-control-word':
             self.no_control_word = True
-        
 
-
+   
