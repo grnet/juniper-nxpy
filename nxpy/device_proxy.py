@@ -595,7 +595,7 @@ class OAM(object):
             try:
                 oam.append(self.ethernet.export())
             except TypeError:
-                pass  
+                pass
             return oam
         else:
             return False
@@ -756,7 +756,7 @@ class MaintenanceAssoc(object):
         if self.mep['direction']:
             sub_ele(mep, 'direction').text = self.mep['direction']
         if self.mep['auto_discovery']:
-            sub_ele(mep, 'auto_discovery')
+            sub_ele(mep, 'auto-discovery')
         if self.mep['ifce']:
             ifce = sub_ele(mep, 'interface')
             sub_ele(ifce, "interface-name").text = self.mep['ifce']

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from device_proxy import Device, DeviceDiff, Interface, Vlan, Unit, Flow, Route, Parser
+from device_proxy import Device, DeviceDiff, Interface, Vlan, Unit, Flow, Route, Parser, L2CIfce, L2CNeighbor, CFMMD, EthernetOAMCFM, OAM, L2Circuit, MaintenanceAssoc, EthernetOAM
 
 __all__ = [
 "Device",
@@ -22,5 +22,13 @@ __all__ = [
 "Unit",
 "Flow",
 "Route",
-"Parser"
+"Parser",
+"L2CIfce",
+"L2CNeighbor",
+"CFMMD",
+"EthernetOAMCFM",
+"OAM",
+"L2Circuit",
+"MaintenanceAssoc",
+"EthernetOAM",
 ]
