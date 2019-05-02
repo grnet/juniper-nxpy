@@ -14,6 +14,7 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/grnet/juniper-nxpy",
     packages=setuptools.find_packages(),
+    install_requires=['lxml'])
     classifiers=[
         "Programming Language :: Python :: 2",
         "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
