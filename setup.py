@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # Copyright 2011 Leonidas Poulopoulos (GRNET S.A - NOC)
+import setuptools
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
@@ -14,7 +15,9 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/grnet/juniper-nxpy",
     packages=setuptools.find_packages(),
-    install_requires=['lxml'],
+    install_requires=[
+        'lxml >=  3.4.0'
+    ],
     classifiers=[
         "Programming Language :: Python :: 2",
         "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
