@@ -7,7 +7,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="juniper-nxpy",
-    version="0.4.1",
+    version="0.4.2",
     author="Leonidas Poulopoulos",
     author_email="dev@noc.grnet.gr",
     description="nxpy: Network XML Python Proxy",

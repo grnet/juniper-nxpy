@@ -55,6 +55,14 @@ conf.interfaces
 
 ## Changelog
 
+* v0.4.3:
+  * Python packaging changes (README,setup.py)
+  * Change license to GPLv3
+* v0.4.2:
+  * Preliminary support for L2VPNS
+  * Ethernet OAM support
+* v0.4.1:
+  * Fix version in setup.py
 * v0.4:
   * Added full support for bgp flowspec (routing-options flow) configuration
 * v0.3:
