@@ -80,7 +80,7 @@ invoke netconf.
 
 * Feed the configuration to nxpy
 
-```
+```python
 import nxpy as np
 conf = np.Parser(<configuration_file_OR_configuration_text>)
 conf = conf.export()
@@ -88,7 +88,7 @@ conf = conf.export()
 
 To check if it worked:
 
-```
+```python
 conf.interfaces
 ```
 
@@ -98,7 +98,7 @@ conf.interfaces
 
 You can also create configuration from scratch:
 
-```
+```python
 from lxml import etree as ET
 import nxpy as np
 device = np.Device()
@@ -119,7 +119,7 @@ This will return XML formatted device configuration.
 
 You can use ncclient to apply the configuration created in the previous example:
 
-```
+```python
 # import the ncclient library
 from ncclient import manager
 # AND replace:
@@ -151,6 +151,14 @@ with manager.connect(host=<HOSTNAME>, port=830, username=<USERNAME>, password=<P
 * v0.3:
   * Support for basic interface configuration (name, description, vlan)
   * Support for basic vlan configuration
+
+## Contributing
+
+Pull requests are welcome. For major changes, please open an issue first to
+discuss what you would like to change.
+
+This repository is managed by [GRNET](https://github.com/grnet). You can contact
+us at dev [at] noc [dot] grnet [dot] gr.
 
 ## License
 
