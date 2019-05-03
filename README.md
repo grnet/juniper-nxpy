@@ -4,6 +4,8 @@
 classes. It is compatible only with Junipers' xml configuration and is developed
 to work alongside [ncclient](https://github.com/ncclient/ncclient).
 
+## Description
+
 nxpy allows for retrieving the device configuration in xml format (using either
 netconf or "show configuration | display xml" via an expect script), transform
 the configuration to python classes in order to manipulate them (view, edit,
@@ -14,28 +16,67 @@ Furthermore, it allows for building configuration via python classes, and apply
 it to the device(s) via netconf or cli expect.  For the time, it supports
 limited configuration changes.
 
+![nxpy flow graph](nxpy.png)
+
+
 ## Installing
+
+As of v0.4.2, nxpy is available on Pypi, so you can install with pip:
+
+```
+pip install juniper-nxpy
+```
+
+Or you can install manually. After cloning the project run:
+
+```
+python setup.py install
+```
 
 Requirements:
 
 * Python 2.6 <= version < 3.0
 * lxml (tested with 2.2.6)
 
-To install:
+## Supported Configuration Mappings
 
-```
-python setup.py install
-```
+* Configuration
+  * Interfaces
+  * Vlans
+* Interface
+  * Name
+  * Description
+  * Unit(s)
+* Vlan
+  * Name
+  * Vlan Id
+* Unit
+  * Name
+  * Description
+  * Vlan Id
+  * Family
+    * Name
+    * Addresses
+      * Address
+      * Name
+    * MTU
+    * Vlan Members
 
 ## Examples
 
+### Parse configuration from device
+
 * Grab the configuration in xml format
 
-Let's say that you have grabbed your Juniper device configuration in xml format
-(This is STRICT!!!). You can use either "show configuration | display xml" (and
+XML configuration can be retrieved from devices that support export to XML:
+
+* via netconf
+* via cli
+* via cli expect scripts.
+
+You can use also run "show configuration | display xml" (and
 copy paste the output to a file), or use an automated cli excpect script or
-invoke netconf.  nxpy is developed as a companion to
-[ncclient](https://github.com/ncclient/ncclient).
+invoke netconf.
 
 * Feed the configuration to nxpy
 
@@ -53,12 +94,54 @@ conf.interfaces
 
 (...you should get the list of device interfaces)
 
+### Create config
+
+You can also create configuration from scratch:
+
+```
+from lxml import etree as ET
+import nxpy as np
+device = np.Device()
+ifce = np.Interface()
+ifce.name = 'ge-0/0/0'
+ifce.description = 'NEW_DESCRIPTION'
+device.interfaces.append(ifce)
+
+device = device.export()
+configuration = ET.tostring(device)
+
+print configuration
+```
+
+This will return XML formatted device configuration.
+
+## Apply the change with NCCLIENT
+
+You can use ncclient to apply the configuration created in the previous example:
+
+```
+# import the ncclient library
+from ncclient import manager
+# AND replace:
+device = device.export()
+# with:
+device = device.export(netconf_config=True)
+# to make configuration netconf-compatible
+# Now to pass configuration to device:
+
+with manager.connect(host=<HOSTNAME>, port=830, username=<USERNAME>, password=<PASSWORD>) as m:
+    m.edit_config(target='candidate', config=configuration, test_option='test-then-set')
+    m.commit(confirmed=True, timeout='120')
+    m.commit(confirmed=False)
+
+# the above should change the description of interface ge-0/0/0 to NEW_DESCRIPTION
+```
+
 ## Changelog
 
-* v0.4.3:
+* v0.4.2:
   * Python packaging changes (README,setup.py)
   * Change license to GPLv3
-* v0.4.2:
   * Preliminary support for L2VPNS
   * Ethernet OAM support
 * v0.4.1:
